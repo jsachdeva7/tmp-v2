@@ -20,6 +20,7 @@ final class PanelState: ObservableObject {
     @Published private(set) var usesExpandedLayout = false
     @Published var promptText = NSAttributedString(string: "", attributes: Fonts.defaultTextAttributes)
     @Published var resizeIntent: PanelResizeIntent = .none
+    @Published private(set) var editorFocusGeneration = 0
 
     static let collapsedSize = CGSize(width: 56, height: 56)
     static let expandedSize = CGSize(width: 400, height: 480)
@@ -33,6 +34,7 @@ final class PanelState: ObservableObject {
         usesExpandedLayout = true
         isExpanded = true
         resizeIntent = .expand
+        requestEditorFocus()
     }
 
     func collapse() {
@@ -42,6 +44,11 @@ final class PanelState: ObservableObject {
 
     func completeExpand() {
         resizeIntent = .none
+        requestEditorFocus()
+    }
+
+    func requestEditorFocus() {
+        editorFocusGeneration += 1
     }
 
     func completeCollapse() {

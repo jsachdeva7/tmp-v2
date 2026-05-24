@@ -30,6 +30,10 @@ struct ContentView: View {
             guard intent != .none else { return }
             panelController.performResize(intent: intent, panelState: panelState)
         }
+        .onChange(of: panelState.usesExpandedLayout) { _, isExpanded in
+            guard isExpanded else { return }
+            panelState.requestEditorFocus()
+        }
     }
 
     private var collapsedBubble: some View {
@@ -53,57 +57,61 @@ struct ContentView: View {
     }
 
     private var expandedPanel: some View {
-        ZStack(alignment: .bottomTrailing) {
-            VStack(spacing: 0) {
-                HStack {
-                    Text("/tmp")
+        VStack(spacing: 0) {
+            HStack {
+                Text("/tmp")
 
-                    Spacer()
+                Spacer()
 
-                    HStack(spacing: 10) {
-                        Button {
-                            panelState.clearPrompt()
-                        } label: {
-                            Image(systemName: "arrow.clockwise")
-                                .font(.system(size: 16, weight: .medium))
-                                .foregroundStyle(.secondary)
-                        }
-                        .buttonStyle(.plain)
-                        .pointerCursorOnHover()
-                        .help("Clear text")
-
-                        Button {
-                            panelState.collapse()
-                        } label: {
-                            Image(systemName: "minus.circle.fill")
-                                .font(.system(size: 18))
-                                .symbolRenderingMode(.hierarchical)
-                                .foregroundStyle(.secondary)
-                        }
-                        .buttonStyle(.plain)
-                        .pointerCursorOnHover()
-                        .help("Minimize to bubble")
+                HStack(spacing: 10) {
+                    Button {
+                        panelState.clearPrompt()
+                    } label: {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundStyle(.secondary)
                     }
+                    .buttonStyle(.plain)
+                    .pointerCursorOnHover()
+                    .help("Clear text")
+
+                    Button {
+                        panelState.collapse()
+                    } label: {
+                        Image(systemName: "minus.circle.fill")
+                            .font(.system(size: 18))
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .pointerCursorOnHover()
+                    .help("Minimize to bubble")
                 }
-                .padding(.horizontal, 14)
-                .padding(.top, 12)
-                .padding(.bottom, 8)
-
-                Divider()
-
-                RichTextEditor(attributedText: $panelState.promptText)
-                    .padding(10)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+            .padding(.horizontal, 14)
+            .padding(.top, 12)
+            .padding(.bottom, 8)
 
-            copyPill
-                .padding(14)
+            Divider()
+
+            RichTextEditor(
+                attributedText: $panelState.promptText,
+                focusGeneration: panelState.editorFocusGeneration
+            )
+            .padding(10)
+            .padding(.bottom, 44)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(width: PanelState.expandedSize.width, height: PanelState.expandedSize.height)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .strokeBorder(.white.opacity(0.2), lineWidth: 1)
+        }
+        .overlay(alignment: .bottomTrailing) {
+            copyPill
+                .padding(14)
+                .zIndex(10)
         }
     }
 
@@ -117,7 +125,6 @@ struct ContentView: View {
                 .frame(width: 16, height: 16)
         }
         .buttonStyle(.plain)
-        .pointerCursorOnHover()
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .background(.ultraThinMaterial, in: Capsule())
@@ -125,9 +132,12 @@ struct ContentView: View {
             Capsule()
                 .strokeBorder(.white.opacity(0.2), lineWidth: 1)
         }
+        .contentShape(Capsule())
+        .pointerCursorOnHover()
         .help(didCopy ? "Copied" : "Copy as Markdown")
         .disabled(!canCopy)
         .opacity(canCopy ? 1 : 0.45)
+        .allowsHitTesting(true)
     }
 
     private func copyPromptToPasteboard() {

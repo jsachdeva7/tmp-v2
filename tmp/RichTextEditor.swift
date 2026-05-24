@@ -8,6 +8,7 @@ import SwiftUI
 
 struct RichTextEditor: NSViewRepresentable {
     @Binding var attributedText: NSAttributedString
+    var focusGeneration: Int = 0
 
     func makeCoordinator() -> Coordinator {
         Coordinator(parent: self)
@@ -40,25 +41,41 @@ struct RichTextEditor: NSViewRepresentable {
 
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
         guard let textView = context.coordinator.textView else { return }
-        guard !textView.attributedString().isEqual(to: attributedText) else { return }
 
-        let selection = textView.selectedRange()
-        textView.textStorage?.setAttributedString(attributedText)
-        let length = textView.string.utf16.count
-        textView.setSelectedRange(
-            NSRange(
-                location: min(selection.location, length),
-                length: min(selection.length, max(0, length - selection.location))
+        if !textView.attributedString().isEqual(to: attributedText) {
+            let selection = textView.selectedRange()
+            textView.textStorage?.setAttributedString(attributedText)
+            let length = textView.string.utf16.count
+            textView.setSelectedRange(
+                NSRange(
+                    location: min(selection.location, length),
+                    length: min(selection.length, max(0, length - selection.location))
+                )
             )
-        )
+        }
+
+        context.coordinator.focusEditorIfNeeded(scrollView: scrollView, generation: focusGeneration)
     }
 
     final class Coordinator: NSObject, NSTextViewDelegate {
         var parent: RichTextEditor
         weak var textView: BeVietnamTextView?
+        private var lastFocusGeneration = 0
 
         init(parent: RichTextEditor) {
             self.parent = parent
+        }
+
+        func focusEditorIfNeeded(scrollView: NSScrollView, generation: Int) {
+            guard generation != lastFocusGeneration, generation > 0 else { return }
+            lastFocusGeneration = generation
+            guard let textView else { return }
+
+            DispatchQueue.main.async {
+                guard let window = scrollView.window else { return }
+                window.makeKeyAndOrderFront(nil)
+                window.makeFirstResponder(textView)
+            }
         }
 
         func textDidChange(_ notification: Notification) {
