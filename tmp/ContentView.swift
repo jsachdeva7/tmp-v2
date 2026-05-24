@@ -6,6 +6,12 @@
 import AppKit
 import SwiftUI
 
+extension Bundle {
+    var marketingVersion: String {
+        infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
+    }
+}
+
 struct ContentView: View {
     @EnvironmentObject private var panelState: PanelState
     @EnvironmentObject private var panelController: FloatingPanelController
@@ -60,8 +66,13 @@ struct ContentView: View {
     private var expandedPanel: some View {
         VStack(spacing: 0) {
             HStack {
-                Text("slate")
-                    .font(.semiBoldItalic(13))
+                HStack(spacing: 6) {
+                    Text("slate")
+                        .font(.semiBoldItalic(13))
+                    Text(Bundle.main.marketingVersion)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.secondary)
+                }
 
                 Spacer()
 

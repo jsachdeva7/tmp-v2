@@ -96,8 +96,10 @@ final class FloatingPanelController: ObservableObject {
             context.timingFunction = animationTiming
             window.animator().setFrame(targetFrame, display: true)
         }, completionHandler: { [weak self] in
-            self?.isAnimating = false
-            completion()
+            Task { @MainActor in
+                self?.isAnimating = false
+                completion()
+            }
         })
     }
 

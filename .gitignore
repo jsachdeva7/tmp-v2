@@ -1,0 +1,27 @@
+# macOS
+.DS_Store
+
+# Xcode user-specific
+*.xcuserstate
+xcuserdata/
+
+# Build artifacts
+build/
+DerivedData/
+
+# Code signing (never commit)
+*.p12
+*.mobileprovision
+*.cer
+*.certSigningRequest
+
+# Sparkle update signing — private keys only (public key in Info.plist is fine)
+.sparkle/
+sparkle_private_key*
+eddsa_private_key*
+dsa_priv.pem
+private-key.pem
+
+# Local env / secrets
+.env
+.env.*
