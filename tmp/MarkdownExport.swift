@@ -18,18 +18,15 @@ enum MarkdownExport {
 
         func flushCodeBlock() {
             guard !codeBlockLines.isEmpty else { return }
-            lines.append("```")
-            lines.append(contentsOf: codeBlockLines)
-            lines.append("```")
+            let body = codeBlockLines.joined(separator: "\n")
+            lines.append("```\n\(body)\n```")
             codeBlockLines = []
         }
 
         while index < length {
             let paragraphRange = string.paragraphRange(for: NSRange(location: index, length: 0))
             let paragraphText = string.substring(with: paragraphRange)
-            let content = paragraphText.hasSuffix("\n")
-                ? String(paragraphText.dropLast())
-                : paragraphText
+            let content = normalizedParagraphContent(paragraphText)
 
             let attributes = attributed.attributes(at: paragraphRange.location, effectiveRange: nil)
             let blockStyle = attributes[.blockStyle] as? String
@@ -54,7 +51,19 @@ enum MarkdownExport {
         }
 
         flushCodeBlock()
-        return lines.joined(separator: "\n")
+        return joinBlocks(lines)
+    }
+
+    /// Markdown treats a single newline as a soft break; separate blocks need a blank line.
+    private static func joinBlocks(_ lines: [String]) -> String {
+        lines.joined(separator: "\n\n")
+    }
+
+    private static func normalizedParagraphContent(_ paragraphText: String) -> String {
+        var content = paragraphText.hasSuffix("\n") ? String(paragraphText.dropLast()) : paragraphText
+        content = content.replacingOccurrences(of: "\u{2028}", with: "\n")
+        content = content.replacingOccurrences(of: "\u{2029}", with: "\n")
+        return content
     }
 
     private static func headingPrefix(for blockStyle: String?) -> String {

@@ -10,6 +10,7 @@ struct ContentView: View {
     @EnvironmentObject private var panelState: PanelState
     @EnvironmentObject private var panelController: FloatingPanelController
     @State private var didCopy = false
+    @State private var copyFeedbackTask: Task<Void, Never>?
 
     private var canCopy: Bool {
         !panelState.promptText.string.isEmpty
@@ -148,9 +149,17 @@ struct ContentView: View {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(markdown, forType: .string)
 
+        copyFeedbackTask?.cancel()
         didCopy = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+
+        copyFeedbackTask = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(450))
+            guard !Task.isCancelled else { return }
+
             didCopy = false
+            if panelState.isExpanded {
+                panelState.collapse()
+            }
         }
     }
 }

@@ -88,6 +88,17 @@ struct RichTextEditor: NSViewRepresentable {
             return textView.handleMarkdownReplacement(in: affectedCharRange, replacement: replacementString ?? "")
         }
 
+        func textView(
+            _ textView: NSTextView,
+            shouldChangeTextIn affectedCharRange: NSRange,
+            replacementAttributedString: NSAttributedString?
+        ) -> Bool {
+            guard let replacementAttributedString,
+                  let textView = textView as? BeVietnamTextView else { return true }
+            textView.insertNormalizedPaste(replacementAttributedString, in: affectedCharRange)
+            return false
+        }
+
         func textViewDidChangeSelection(_ notification: Notification) {
             guard let textView = notification.object as? BeVietnamTextView else { return }
             textView.syncTypingAttributesToSelection()
@@ -98,6 +109,25 @@ struct RichTextEditor: NSViewRepresentable {
 // MARK: - NSTextView
 
 final class BeVietnamTextView: NSTextView {
+    override func paste(_ sender: Any?) {
+        if let rich = NSPasteboard.general.readObjects(forClasses: [NSAttributedString.self], options: nil)?
+            .first as? NSAttributedString,
+           rich.length > 0 {
+            insertNormalizedPaste(rich, in: selectedRange())
+            return
+        }
+        super.paste(sender)
+    }
+
+    func insertNormalizedPaste(_ content: NSAttributedString, in range: NSRange) {
+        let normalized = AttributedTextNormalizer.normalized(content, typingAttributes: typingAttributes)
+        textStorage?.beginEditing()
+        textStorage?.replaceCharacters(in: range, with: normalized)
+        textStorage?.endEditing()
+        setSelectedRange(NSRange(location: range.location + normalized.length, length: 0))
+        didChangeText()
+    }
+
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
         guard event.modifierFlags.contains(.command) else {
             return super.performKeyEquivalent(with: event)
