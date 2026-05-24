@@ -5,12 +5,20 @@
 
 import AppKit
 import Combine
+import QuartzCore
 import SwiftUI
 
 @MainActor
 final class FloatingPanelController: ObservableObject {
     private weak var window: NSWindow?
     private var isAnimating = false
+    private let animationDuration: TimeInterval = 0.22
+    private let animationTiming = CAMediaTimingFunction(name: .easeInEaseOut)
+    private let expandedCornerRadius: CGFloat = 16
+
+    private var collapsedCornerRadius: CGFloat {
+        min(PanelState.collapsedSize.width, PanelState.collapsedSize.height) / 2
+    }
 
     func attach(window: NSWindow) {
         guard self.window !== window else { return }
@@ -41,7 +49,8 @@ final class FloatingPanelController: ObservableObject {
         case .expand:
             animate(
                 window: window,
-                to: Self.bottomRightAnchoredFrame(window: window, size: PanelState.expandedSize)
+                to: Self.bottomRightAnchoredFrame(window: window, size: PanelState.expandedSize),
+                cornerRadius: expandedCornerRadius
             ) { [weak self] in
                 panelState.completeExpand()
                 self?.syncSpaceBehavior()
@@ -49,7 +58,8 @@ final class FloatingPanelController: ObservableObject {
         case .collapse:
             animate(
                 window: window,
-                to: Self.bottomRightAnchoredFrame(window: window, size: PanelState.collapsedSize)
+                to: Self.bottomRightAnchoredFrame(window: window, size: PanelState.collapsedSize),
+                cornerRadius: collapsedCornerRadius
             ) { [weak self] in
                 panelState.completeCollapse()
                 self?.syncSpaceBehavior()
@@ -69,18 +79,50 @@ final class FloatingPanelController: ObservableObject {
         window.standardWindowButton(.closeButton)?.isHidden = true
         window.standardWindowButton(.miniaturizeButton)?.isHidden = true
         window.standardWindowButton(.zoomButton)?.isHidden = true
+        configureContentMask(for: window)
     }
 
-    private func animate(window: NSWindow, to targetFrame: NSRect, completion: @escaping () -> Void) {
+    private func animate(
+        window: NSWindow,
+        to targetFrame: NSRect,
+        cornerRadius: CGFloat,
+        completion: @escaping () -> Void
+    ) {
         isAnimating = true
+        animateContentMask(for: window, to: cornerRadius)
+
         NSAnimationContext.runAnimationGroup({ context in
-            context.duration = 0.22
-            context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            context.duration = animationDuration
+            context.timingFunction = animationTiming
             window.animator().setFrame(targetFrame, display: true)
         }, completionHandler: { [weak self] in
             self?.isAnimating = false
             completion()
         })
+    }
+
+    private func configureContentMask(for window: NSWindow) {
+        window.contentView?.wantsLayer = true
+        window.contentView?.layer?.masksToBounds = true
+        window.contentView?.layer?.cornerCurve = .continuous
+        window.contentView?.layer?.cornerRadius = collapsedCornerRadius
+    }
+
+    private func animateContentMask(for window: NSWindow, to cornerRadius: CGFloat) {
+        guard let layer = window.contentView?.layer else { return }
+
+        let animation = CABasicAnimation(keyPath: "cornerRadius")
+        animation.fromValue = layer.presentation()?.cornerRadius ?? layer.cornerRadius
+        animation.toValue = cornerRadius
+        animation.duration = animationDuration
+        animation.timingFunction = animationTiming
+
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        layer.cornerRadius = cornerRadius
+        CATransaction.commit()
+
+        layer.add(animation, forKey: "cornerRadius")
     }
 
     private static func bottomRightAnchoredFrame(window: NSWindow, size: CGSize) -> NSRect {

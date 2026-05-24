@@ -58,9 +58,9 @@ extension Fonts {
         let name: String
         switch (isBold, isItalic) {
         case (false, false): name = regular
-        case (true, false): name = bold
+        case (true, false): name = semiBold
         case (false, true): name = italic
-        case (true, true): name = boldItalic
+        case (true, true): name = semiBoldItalic
         }
         return NSFont(name: name, size: size) ?? .systemFont(ofSize: size)
     }
@@ -72,8 +72,11 @@ extension Fonts {
 
     static func traits(for font: NSFont) -> Traits {
         switch font.fontName {
-        case bold, boldItalic:
-            return Traits(bold: true, italic: font.fontName == boldItalic)
+        case semiBold, semiBoldItalic, bold, boldItalic:
+            return Traits(
+                bold: true,
+                italic: font.fontName == semiBoldItalic || font.fontName == boldItalic
+            )
         case italic:
             return Traits(bold: false, italic: true)
         default:

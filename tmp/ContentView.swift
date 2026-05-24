@@ -53,13 +53,14 @@ struct ContentView: View {
             Circle()
                 .strokeBorder(.white.opacity(0.25), lineWidth: 1)
         }
-        .help("Open /tmp canvas")
+        .help("Open Slate canvas")
     }
 
     private var expandedPanel: some View {
         VStack(spacing: 0) {
             HStack {
-                Text("/tmp")
+                Text("slate")
+                    .font(.semiBoldItalic(13))
 
                 Spacer()
 
