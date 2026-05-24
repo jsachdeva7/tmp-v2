@@ -15,6 +15,7 @@ struct tmpApp: App {
             ContentView()
                 .environmentObject(panelState)
                 .environmentObject(panelController)
+                .font(.regular(13))
         }
         .windowStyle(.hiddenTitleBar)
         .defaultSize(

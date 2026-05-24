@@ -49,7 +49,6 @@ struct ContentView: View {
         VStack(spacing: 0) {
             HStack {
                 Text("/tmp")
-                    .font(.headline)
 
                 Spacer()
 
@@ -70,9 +69,7 @@ struct ContentView: View {
 
             Divider()
 
-            TextEditor(text: $panelState.promptText)
-                .font(.body)
-                .scrollContentBackground(.hidden)
+            RichTextEditor(attributedText: $panelState.promptText)
                 .padding(10)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }

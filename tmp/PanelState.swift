@@ -3,6 +3,7 @@
 //  tmp
 //
 
+import AppKit
 import Combine
 import SwiftUI
 
@@ -17,7 +18,7 @@ final class PanelState: ObservableObject {
     @Published var isExpanded = false
     /// Drives SwiftUI chrome; stays expanded until the collapse window animation finishes.
     @Published private(set) var usesExpandedLayout = false
-    @Published var promptText = ""
+    @Published var promptText = NSAttributedString(string: "", attributes: Fonts.defaultTextAttributes)
     @Published var resizeIntent: PanelResizeIntent = .none
 
     static let collapsedSize = CGSize(width: 56, height: 56)
