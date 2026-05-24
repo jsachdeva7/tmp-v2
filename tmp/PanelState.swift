@@ -49,4 +49,8 @@ final class PanelState: ObservableObject {
         usesExpandedLayout = false
         resizeIntent = .none
     }
+
+    func clearPrompt() {
+        promptText = NSAttributedString(string: "", attributes: Fonts.defaultTextAttributes)
+    }
 }

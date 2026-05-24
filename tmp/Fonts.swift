@@ -26,6 +26,7 @@ enum Fonts {
     static let extraBoldItalic = "BeVietnamPro-ExtraBoldItalic"
     static let black = "BeVietnamPro-Black"
     static let blackItalic = "BeVietnamPro-BlackItalic"
+    static let code = "SourceCodePro-ExtraLight"
 }
 
 extension Font {
@@ -47,6 +48,7 @@ extension Font {
     static func extraBoldItalic(_ size: CGFloat) -> Font { .custom(Fonts.extraBoldItalic, size: size) }
     static func black(_ size: CGFloat) -> Font { .custom(Fonts.black, size: size) }
     static func blackItalic(_ size: CGFloat) -> Font { .custom(Fonts.blackItalic, size: size) }
+    static func code(_ size: CGFloat) -> Font { .custom(Fonts.code, size: size) }
 }
 
 extension Fonts {
@@ -84,5 +86,13 @@ extension Fonts {
             .font: nsFont(),
             .foregroundColor: NSColor.labelColor,
         ]
+    }
+
+    static func codeFont(size: CGFloat = defaultSize) -> NSFont {
+        NSFont(name: code, size: size) ?? .monospacedSystemFont(ofSize: size, weight: .regular)
+    }
+
+    static func headingFont(size: CGFloat) -> NSFont {
+        NSFont(name: semiBold, size: size) ?? nsFont(size: size)
     }
 }

@@ -65,6 +65,16 @@ struct RichTextEditor: NSViewRepresentable {
             guard let textView = notification.object as? BeVietnamTextView else { return }
             parent.attributedText = textView.attributedString()
         }
+
+        func textView(_ textView: NSTextView, shouldChangeTextIn affectedCharRange: NSRange, replacementString: String?) -> Bool {
+            guard let textView = textView as? BeVietnamTextView else { return true }
+            return textView.handleMarkdownReplacement(in: affectedCharRange, replacement: replacementString ?? "")
+        }
+
+        func textViewDidChangeSelection(_ notification: Notification) {
+            guard let textView = notification.object as? BeVietnamTextView else { return }
+            textView.syncTypingAttributesToSelection()
+        }
     }
 }
 
@@ -85,6 +95,111 @@ final class BeVietnamTextView: NSTextView {
         default:
             return super.performKeyEquivalent(with: event)
         }
+    }
+
+    /// Returns `true` to allow the edit, `false` to reject it (NSTextView delegate convention).
+    func handleMarkdownReplacement(in range: NSRange, replacement: String) -> Bool {
+        if replacement == " " {
+            if tryApplyHeading(at: range) { return false }
+            return true
+        }
+        if replacement == "`" {
+            if tryToggleCodeFence(at: range) { return false }
+            return true
+        }
+        if replacement == "\n", isHeadingTypingAttributes {
+            typingAttributes = Fonts.defaultTextAttributes
+        }
+        return true
+    }
+
+    private var isHeadingTypingAttributes: Bool {
+        guard let raw = typingAttributes[.blockStyle] as? String else { return false }
+        return raw == BlockStyle.heading1.rawValue
+            || raw == BlockStyle.heading2.rawValue
+            || raw == BlockStyle.heading3.rawValue
+    }
+
+    func syncTypingAttributesToSelection() {
+        guard selectedRange().length == 0 else { return }
+        guard let storage = textStorage, storage.length > 0 else { return }
+
+        let location = selectedRange().location
+        // Don't inherit the previous line's body style when starting a fresh line
+        // (e.g. right after `#` + space applies heading typing attributes).
+        if isCurrentLineEmpty(at: location) {
+            return
+        }
+
+        let attributeIndex = location == storage.length ? max(0, storage.length - 1) : location
+        let attributes = storage.attributes(at: attributeIndex, effectiveRange: nil)
+        typingAttributes = Markdown.typingAttributes(from: attributes)
+    }
+
+    private func isCurrentLineEmpty(at location: Int) -> Bool {
+        let nsString = string as NSString
+        let lineRange = nsString.lineRange(for: NSRange(location: location, length: 0))
+        let line = nsString.substring(with: lineRange)
+        return line.trimmingCharacters(in: .newlines).isEmpty
+    }
+
+    /// Returns `true` if the markdown shortcut was applied (caller should reject the default insert).
+    private func tryApplyHeading(at range: NSRange) -> Bool {
+        let nsString = string as NSString
+        let lineRange = nsString.lineRange(for: range)
+        let prefixLength = range.location - lineRange.location
+        guard prefixLength > 0 else { return false }
+
+        let prefix = nsString.substring(with: NSRange(location: lineRange.location, length: prefixLength))
+        guard let level = Markdown.headingLevel(from: prefix) else { return false }
+
+        let headingAttributes = Markdown.headingAttributes(level: level)
+
+        textStorage?.beginEditing()
+        textStorage?.deleteCharacters(in: NSRange(location: lineRange.location, length: prefixLength))
+        let styledLineRange = NSRange(location: lineRange.location, length: lineRange.length - prefixLength)
+        if styledLineRange.length > 0 {
+            textStorage?.setAttributes(headingAttributes, range: styledLineRange)
+        }
+        textStorage?.endEditing()
+
+        typingAttributes = headingAttributes
+        setSelectedRange(NSRange(location: lineRange.location, length: 0))
+        didChangeText()
+        return true
+    }
+
+    /// Returns `true` if the code fence was toggled (caller should reject the default insert).
+    private func tryToggleCodeFence(at range: NSRange) -> Bool {
+        let nsString = string as NSString
+        let lineRange = nsString.lineRange(for: range)
+        let prefixLength = range.location - lineRange.location
+        guard prefixLength == 2 else { return false }
+
+        let prefix = nsString.substring(with: NSRange(location: lineRange.location, length: prefixLength))
+        guard prefix == "``" else { return false }
+
+        let closing = isInCodeBlock(at: range.location)
+
+        textStorage?.beginEditing()
+        textStorage?.deleteCharacters(in: NSRange(location: lineRange.location, length: prefixLength))
+        textStorage?.endEditing()
+
+        typingAttributes = closing ? Fonts.defaultTextAttributes : Markdown.codeAttributes
+        setSelectedRange(NSRange(location: lineRange.location, length: 0))
+        didChangeText()
+        return true
+    }
+
+    private func isInCodeBlock(at location: Int) -> Bool {
+        if Markdown.isCodeBlock(typingAttributes) {
+            return true
+        }
+        guard let storage = textStorage, storage.length > 0 else { return false }
+
+        let index = min(max(0, location - (location == storage.length ? 1 : 0)), storage.length - 1)
+        let attributes = storage.attributes(at: index, effectiveRange: nil)
+        return Markdown.isCodeBlock(attributes)
     }
 
     private enum TextTrait {
