@@ -31,6 +31,7 @@ struct FloatingWindowAccessor: NSViewRepresentable {
             DispatchQueue.main.async {
                 guard let window = view.window else { return }
                 panelController.attach(window: window)
+                panelController.syncSpaceBehavior()
             }
         }
     }

@@ -42,8 +42,6 @@ struct ContentView: View {
             Circle()
                 .strokeBorder(.white.opacity(0.25), lineWidth: 1)
         }
-        .compositingGroup()
-        .shadow(color: .black.opacity(0.2), radius: 8, y: 3)
         .help("Open /tmp canvas")
     }
 
@@ -84,8 +82,6 @@ struct ContentView: View {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .strokeBorder(.white.opacity(0.2), lineWidth: 1)
         }
-        .compositingGroup()
-        .shadow(color: .black.opacity(0.22), radius: 18, y: 8)
     }
 }
 

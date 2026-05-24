@@ -20,6 +20,14 @@ final class FloatingPanelController: ObservableObject {
             Self.screenAnchoredFrame(for: window, size: PanelState.collapsedSize),
             display: true
         )
+        syncSpaceBehavior()
+    }
+
+    /// Re-applies Space behavior; SwiftUI may reset `collectionBehavior` after layout updates.
+    func syncSpaceBehavior() {
+        guard let window else { return }
+        window.hasShadow = false
+        Self.applySpaceBehavior(to: window)
     }
 
     func performResize(intent: PanelResizeIntent, panelState: PanelState) {
@@ -34,15 +42,17 @@ final class FloatingPanelController: ObservableObject {
             animate(
                 window: window,
                 to: Self.bottomRightAnchoredFrame(window: window, size: PanelState.expandedSize)
-            ) {
+            ) { [weak self] in
                 panelState.completeExpand()
+                self?.syncSpaceBehavior()
             }
         case .collapse:
             animate(
                 window: window,
                 to: Self.bottomRightAnchoredFrame(window: window, size: PanelState.collapsedSize)
-            ) {
+            ) { [weak self] in
                 panelState.completeCollapse()
+                self?.syncSpaceBehavior()
             }
         }
     }
@@ -54,7 +64,6 @@ final class FloatingPanelController: ObservableObject {
         window.isOpaque = false
         window.backgroundColor = .clear
         window.level = .floating
-        window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         window.hasShadow = false
         window.isMovableByWindowBackground = true
         window.standardWindowButton(.closeButton)?.isHidden = true
@@ -82,6 +91,10 @@ final class FloatingPanelController: ObservableObject {
             width: size.width,
             height: size.height
         )
+    }
+
+    private static func applySpaceBehavior(to window: NSWindow) {
+        window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
     }
 
     private static func screenAnchoredFrame(for window: NSWindow, size: CGSize) -> NSRect {
